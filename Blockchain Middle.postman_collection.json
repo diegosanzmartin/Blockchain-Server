@@ -1,0 +1,206 @@
+{
+	"info": {
+		"_postman_id": "28ceefa3-7ed0-4d4a-88d6-2813c4fb639c",
+		"name": "Blockchain Middle",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Print Chain",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n \"sender\": \"Alexey3\",\n \"recipient\": \"Pilar3\",\n \"amount\":20\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/chain",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"chain"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Print Pending Transactions",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/pending_tx",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"pending_tx"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Verify Chain",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/validate_chain",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"validate_chain"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Mine",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n \"sender\": \"Alexey3\",\n \"recipient\": \"Pilar3\",\n \"amount\":20\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/mine",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"mine"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "New Transaction",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n \"Sender\": \"Alexey1\",\n \"Recipient\": \"Pilar1\",\n \"Amount\":10\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/new_transaction",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"new_transaction"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Change Difficulty",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n \"n_diff\": 3\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/change_difficulty",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"change_difficulty"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Shutdown",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n \"sender\": \"Alexey3\",\n \"recipient\": \"Pilar3\",\n \"amount\":20\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8000/shutdown",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"shutdown"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Change Max Peding Transactions",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n \"n_pend\": 3\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8000/change_max_pending_txs",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"change_max_pending_txs"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
