@@ -1,5 +1,5 @@
 from hashlib import sha256
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect, session, render_template, url_for
 import requests, json, time, copy
 # Sol: here we added a copy package to copy blockchain before validation
 
@@ -37,19 +37,16 @@ class Blockchain:
     def last_block(self):
         return self.chain[-1]
 
-
     #Sol:  
     @property
     def unconfirmed_tx(self):
         return len(self.unconfirmed_transactions)
-
 
 	# Sol: this is new method to copy blockchain
 	# We will need to copy as we'll be pop()ing out the last transaction when validating the chain!
     @property
     def chain_cpy(self):
         return [copy.deepcopy(blk) for blk in self.chain]
-
 
 	# Sol: we will modify this method to get rid of reward block
     @classmethod
@@ -86,7 +83,6 @@ class Blockchain:
     @staticmethod
     def change_max_pending_txs(pend):
     	Blockchain.max_unconfirmed_txs = pend
-
 
     def add_block(self, block, proof):
         previous_hash = self.last_block.hash
@@ -144,44 +140,98 @@ class Blockchain:
 
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = "password"
 
 blockchain = Blockchain()
 
 peers = set()
+db = {}
+db["users"] = []
 
+@app.route('/')
+def main():
+    return render_template("login.html")
+
+@app.route('/login', methods= ['POST'])
+def login():
+    if request.method == 'POST':        
+        for user in db["users"]:
+            if request.form['username'] == user["name"]:
+                print("ERR: User already exist")
+                return render_template("notification.html", mss="User already exist")
+
+        db["users"].append({
+            "name": request.form['username'],
+            "wallet": 5000
+        })
+        session['user'] = request.form['username']
+        session['logged_in'] = True
+        print(db)
+        return redirect(url_for('dashboard'))
+    
+@app.route('/dashboard')
+def dashboard():
+    chain_data = []
+    user_wallet = 0
+
+    for block in blockchain.chain:
+        chain_data.append(block.__dict__)
+
+    for user in db["users"]:
+        if session['user'] == user["name"]:
+            user_wallet = user["wallet"]
+
+    return render_template("dashboard.html", m_wallet= str(user_wallet))
 
 # Sol: new end point to change difficulty
-@app.route('/change_difficulty', methods = ['POST'])
+@app.route('/change_difficulty', methods=['GET', 'POST'])
 def update_difficulty():
-    tx_data = request.get_json()
-    if not tx_data.get("n_diff"):
-        return "Invalid data...", 400
+    if request.method == 'POST':
+        
+        """ tx_data = request.get_json()
+        if not tx_data.get("n_diff"):
+            print(tx_data)
+            return "Invalid data...", 400
 
-    n_diff = tx_data['n_diff']
+        n_diff = tx_data['n_diff'] """
 
-    if n_diff <= 0:
-        return "Bad value...", 400
+        n_diff = int(request.form["input"])
 
-    blockchain.change_difficulty(n_diff)
+        if n_diff <= 0:
+            #return "Bad value...", 400
+            return render_template("notification.html", mss="Bad value...")
 
-    return "New difficulty -> {}".format(n_diff), 201
+        blockchain.change_difficulty(n_diff)
+
+        #return "New difficulty -> {}".format(n_diff), 201
+        return render_template("notification.html", mss="New difficulty -> {}".format(n_diff))
+    
+    elif request.method == 'GET':
+        return render_template("form.html", title="Change difficulty", type="number")
  
-
 # Sol: new end point to change max pending transactions
-@app.route('/change_max_pending_txs', methods = ['POST'])
+@app.route('/change_max_pending_txs', methods=['GET', 'POST'])
 def update_max_pending_txs():
-    tx_data = request.get_json()
-    if not tx_data.get("n_pend"):
-        return "Invalid data...", 400
+    if request.method == 'POST':
 
-    n_pend = tx_data['n_pend']
+        """ tx_data = request.get_json()
+        if not tx_data.get("n_pend"):
+            return "Invalid data...", 400
 
-    if n_pend <= 0:
-        return "Bad value...", 400
+        n_pend = tx_data['n_pend'] """
 
-    blockchain.change_max_pending_txs(n_pend)
+        n_pend = int(request.form["input"])
 
-    return "New maximum pending transactions -> {}".format(n_pend), 201
+        if n_pend <= 0:
+            return "Bad value...", 400
+
+        blockchain.change_max_pending_txs(n_pend)
+
+        #return "New maximum pending transactions -> {}".format(n_pend), 201
+        return render_template("notification.html", mss="New maximum pending transactions -> {}".format(n_pend))
+    
+    elif request.method == 'GET':
+        return render_template("form.html", title="Change max pending transactions", type="number")
 
 # Sol: new end point to validate blockchain
 @app.route('/validate_chain', methods = ['GET'])
@@ -189,30 +239,59 @@ def validate_chain():
     # Sol: here we change the parameter for the validity method, otherwise bockchain will be changed during validation process
     # If passed by reference we'll be overwriting the original chain!
     if blockchain.check_chain_validity(blockchain.chain_cpy):
-        return "Valid chain!", 200
-    return "The chain has been tampered with!", 200
-
+        #return "Valid chain!", 200
+        return render_template("notification.html", mss="Valid chain!")
+    #return "The chain has been tampered with!", 200
+    return render_template("notification.html", mss="The chain has been tampered with!")
 
 # Sol: here we did add validation for how many transactions are allowed in block.
-@app.route('/new_transaction', methods = ['POST'])
+@app.route('/new_transaction', methods=['GET', 'POST'])
 def new_transaction():
-    tx_data = request.get_json()
-    required_fields = ["Recipient", "Sender", "Amount"]
+    if request.method == 'POST':
+        """ tx_data = request.get_json()
+        required_fields = ["Recipient", "Sender", "Amount"]
 
-    for field in required_fields:
-        if not tx_data.get(field):
-            return "Invalid transaction data", 400
+        for field in required_fields:
+            if not tx_data.get(field):
+                return "Invalid transaction data", 400 """
 
-    tx_data["timestamp"] = time.time()
+        sender = session['user']
+        recipient = request.form["input1"]
+        amount = int(request.form["input2"])
 
-    blockchain.add_new_transaction(tx_data)
+        print(sender, recipient, amount)
 
-    if blockchain.unconfirmed_tx == Blockchain.max_unconfirmed_txs:
-        requests.get('http://127.0.0.1:{}/mine'.format(port))
-        return "Automatically mined block #{} as we reached {} pending transactions".format(blockchain.last_block.index, Blockchain.max_unconfirmed_txs), 201
+        if amount < 0:
+            #return "Bad value...", 400
+            return render_template("notification.html", mss="Bad value...")
 
-    return "Success", 201
+        user_err = True
+        for user in db["users"]:
+            if user["name"] == recipient:
+                user_err = False
 
+        if user_err or sender == recipient:
+            #return "Recipient not found...", 400
+            return render_template("notification.html", mss="Recipient not found...")
+
+        tx_data = {
+            "Sender": sender,
+            "Recipient": recipient,
+            "Amount": amount
+        }
+        tx_data["timestamp"] = time.time()
+
+        blockchain.add_new_transaction(tx_data)
+
+        if blockchain.unconfirmed_tx == Blockchain.max_unconfirmed_txs:
+            requests.get('http://127.0.0.1:{}/mine'.format(port))
+            return "Automatically mined block #{} as we reached {} pending transactions".format(blockchain.last_block.index, Blockchain.max_unconfirmed_txs), 201
+    
+        #return "Success", 201
+        return render_template("notification.html", mss="Success")
+
+    elif request.method == 'GET':
+        return render_template("transaction.html", title="New transaction", label1="Recipient", label2="Amount", type2="number")
 
 def shutdown_server():
     func = request.environ.get('werkzeug.server.shutdown')
@@ -220,29 +299,31 @@ def shutdown_server():
         raise RuntimeError('Not running with the Werkzeug Server')
     func()
 
-@app.route('/shutdown', methods = ['POST'])
+@app.route('/shutdown', methods=['GET', 'POST'])
 def shutdown():
     shutdown_server()
-    return 'Server shutting down...'
+    #return 'Server shutting down...'
+    return render_template("notification.html", mss='Server shutting down...') 
 
 @app.route('/chain', methods = ['GET'])
 def get_chain():
     chain_data = []
     for block in blockchain.chain:
         chain_data.append(block.__dict__)
-    
-    response = {
-        "length": len(chain_data),
-        "chain": chain_data,
-        "peers": list(peers)
-    }
-    return jsonify(response), 200
+
+    #return jsonify(response), 200
+    return render_template("table.html", json_table=json.dumps(chain_data))
 
 @app.route('/mine', methods = ['GET'])
 def mine_unconfirmed_transactions():
+    un_tx = json.loads(json.dumps(blockchain.unconfirmed_transactions))
     result = blockchain.mine()
+
+    print(un_tx)
+
     if not result:
-        return "No transactions to mine"
+        #return "No transactions to mine"
+        return render_template("notification.html", mss="No transactions to mine")
     else:
         # Conseguimos la longitud de nuestro blockchain
         chain_length = len(blockchain.chain)
@@ -250,47 +331,71 @@ def mine_unconfirmed_transactions():
         if chain_length == len(blockchain.chain):
             # Si nuestro blockchain era el más largo anunciamos que hemos añadido un bloque nuevo a los demás.
             announce_new_block(blockchain.last_block)
-        return "Block #{} is mined.".format(blockchain.last_block.index)
+        #return "Block #{} is mined.".format(blockchain.last_block.index)
 
-@app.route('/register_node', methods = ['POST'])
-def register_new_peers():
-    node_address = request.get_json()["node_address"]
-    if not node_address:
-        return "Invalid data", 400
+        for tx in un_tx:
+            for user in db["users"]:
+                if tx["Sender"] == user["name"]:
+                    user["wallet"] -= int(tx["Amount"])
+                
+                elif tx["Recipient"] == user["name"]:
+                    user["wallet"] += int(tx["Amount"])
 
-    # Añadimos el nodo a la lista
-    peers.add(node_address)
+                if session['user'] == user["name"]:
+                    print(user["wallet"])
+                    user["wallet"] += 1
+                    print(user["wallet"])
 
-    # Le pasamos el blockchain actual para que se sincronice con nosotros
-    return get_chain()
+        chain_data = []
+        for block in blockchain.chain:
+            chain_data.append(block.__dict__)
 
-@app.route('/register_with', methods = ['POST'])
-def register_with_existing_node():
-    node_address = request.get_json()["node_address"]
-    if not node_address:
-        return "Invalid data", 400
-
-    data = {"node_address": request.host_url}
-    headers = {'Content-Type': "application/json"}
-
-    # Hacemos una petición para registrarnos con el nodo que especifiquemos al hacer la petición a '/register_with'
-    response = requests.post(node_address + "/register_node", data = json.dumps(data), headers = headers)
-
-    # Si nos hemos registrado correctamente
-    if response.status_code == 200:
-        global blockchain
-        global peers
+        with open("static/chain.json", "w") as file:
+            file.write(json.dumps(chain_data))
         
-        # Actualizamos nuestra copia del blockchain y la lista de peers o nodos de la red
-        chain_dump = response.json()['chain']
-        blockchain = create_chain_from_dump(chain_dump)
-        peers.update(response.json()['peers'])
+        return render_template("notification.html", mss="Block #{} is mined.".format(blockchain.last_block.index))
 
-        # Devolvemoos un 200 OK
-        return "Registration successful", 200
-    else:
-        # Si ocurre algún error lo maneja la API de response
-        return response.content, response.status_code
+@app.route('/register_node', methods=['GET', 'POST'])
+def register_new_peers():
+    if request.method == 'POST':
+        node_address = request.get_json()["node_address"]
+        if not node_address:
+            return "Invalid data", 400
+
+        # Añadimos el nodo a la lista
+        peers.add(node_address)
+
+        # Le pasamos el blockchain actual para que se sincronice con nosotros
+        return get_chain()
+
+@app.route('/register_with', methods=['GET', 'POST'])
+def register_with_existing_node():
+    if request.method == 'POST':
+        node_address = request.get_json()["node_address"]
+        if not node_address:
+            return "Invalid data", 400
+
+        data = {"node_address": request.host_url}
+        headers = {'Content-Type': "application/json"}
+
+        # Hacemos una petición para registrarnos con el nodo que especifiquemos al hacer la petición a '/register_with'
+        response = requests.post(node_address + "/register_node", data = json.dumps(data), headers = headers)
+
+        # Si nos hemos registrado correctamente
+        if response.status_code == 200:
+            global blockchain
+            global peers
+            
+            # Actualizamos nuestra copia del blockchain y la lista de peers o nodos de la red
+            chain_dump = response.json()['chain']
+            blockchain = create_chain_from_dump(chain_dump)
+            peers.update(response.json()['peers'])
+
+            # Devolvemoos un 200 OK
+            return "Registration successful", 200
+        else:
+            # Si ocurre algún error lo maneja la API de response
+            return response.content, response.status_code
 
 def create_chain_from_dump(chain_dump):
     generated_blockchain = Blockchain()
@@ -315,30 +420,45 @@ def create_chain_from_dump(chain_dump):
     # Si todo ha ido bien se devuelve la cadena construida.
     return generated_blockchain
 
-@app.route('/add_block', methods = ['POST'])
+@app.route('/add_block', methods=['GET', 'POST'])
 def verify_and_add_block():
-    block_data = request.get_json()
-    block = Block(block_data["index"],
-                  block_data["transactions"],
-                  block_data["timestamp"],
-                  block_data["previous_hash"],
-                  block_data["nonce"])
+    if request.method == 'POST':
+        block_data = request.get_json()
+        block = Block(block_data["index"],
+                    block_data["transactions"],
+                    block_data["timestamp"],
+                    block_data["previous_hash"],
+                    block_data["nonce"])
 
-    proof = block_data['hash']
-    added = blockchain.add_block(block, proof)
+        proof = block_data['hash']
+        added = blockchain.add_block(block, proof)
 
-    if not added:
-        return "The block was discarded by the node", 400
+        if not added:
+            return "The block was discarded by the node", 400
 
-    return "Block added to the chain", 201
-
+        return "Block added to the chain", 201
 
 # Al hacer peticiones a '/pending_tx' se devuelve la lista de transacciones pendientes del nodo como
 # un objeto JSON
-
-@app.route('/pending_tx')
+@app.route('/pending_tx', methods = ['GET'])
 def get_pending_tx():
-    return json.dumps(blockchain.unconfirmed_transactions)
+    #return json.dumps(blockchain.unconfirmed_transactions)
+    return render_template("table.html", json_table=json.dumps(blockchain.unconfirmed_transactions))
+
+@app.route('/total_tx', methods = ['GET'])
+def tx():
+    chain_data = []
+    transactions = []
+
+    for block in blockchain.chain:
+        chain_data.append(block.__dict__)
+
+    for x in chain_data:
+        for tx in x["transactions"]:
+            if tx not in transactions:
+                transactions.append(tx)
+
+    return render_template("table.html", json_table=json.dumps(transactions))
 
 def consensus():
     global blockchain

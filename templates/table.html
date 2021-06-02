@@ -1,0 +1,63 @@
+{% extends "index.html" %}
+{% block main %}
+{% if session.logged_in %}
+<div id="layoutAuthentication">
+    <div id="layoutAuthentication_content">
+        <main>
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-12">
+                        <div class="card shadow-lg border-0 rounded-lg mt-5">
+                            <div class="card-header"><h3 class="text-center font-weight-light my-3">{{ title }}</h3></div>
+                            <div class="card-body">
+                                <div class="table-responsive" id="output"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    function json2Table(json) {
+        let cols = Object.keys(json[0]);
+
+        let headerRow = cols
+            .map(col => `<th>${col}</th>`)
+            .join("");
+
+        let rows = json
+            .map(row => {
+            let tds = cols.map(col => `<td>${JSON.stringify(row[col])}</td>`).join("");
+            return `<tr>${tds}</tr>`;
+            })
+            .join("");
+
+        //build the table
+        const table = `
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>${headerRow}</tr>
+                <thead>
+                <tbody>
+                    ${rows}
+                <tbody>
+            <table>`;
+
+        return table;
+    }
+
+    var data = '{{json_table}}'.replace(/&#34;/g, '"');
+    console.log(data);
+    var json_table = JSON.parse(data);
+    console.log(json_table)
+
+    output = document.getElementById('output');
+    output.innerHTML = json2Table(json_table);
+</script>
+
+
+{% endif %}
+{% endblock %}

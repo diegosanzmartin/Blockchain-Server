@@ -336,6 +336,11 @@ class Blockchain:
 
         return True
 
+#//// Parte 1 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    def validate(self):
+        print(self.last_block)
+
 
 
 # Instanciamos el servidor de Flask con el valor de __name__, una vriable interna de Python
@@ -595,6 +600,14 @@ def verify_and_add_block():
 @app.route('/pending_tx')
 def get_pending_tx():
     return json.dumps(blockchain.unconfirmed_transactions)
+
+#//// Parte 1 ////////////////////////////////////////////////////////////////////////////////////////////////////
+@app.route('/validate_chain')
+def validate_chain():
+    chain = blockchain.validate()
+    return "OK", 200
+
+#////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 # Cuando queremos añadir un bloque al blockchain avisaremos a todos los demás nodos de la red. 
 # Les haremos una petición para saber la longitud de sus cadenas. 
